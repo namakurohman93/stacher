@@ -1,3 +1,11 @@
+"""
+Event Hooks
+Requests has a hook system that you can use to manipulate
+portions of the request process, or signal event handling.
+
+http://docs.python-requests.org/en/stable/user/advanced/#event-hooks
+"""
+
 import re
 
 from exceptions import GetError
@@ -21,5 +29,5 @@ def get_token(r, *args, **kwargs):
     r.token = pattern.search(r.text).group(1)
 
 def get_session(r, *args, **kwargs):
-    pattern = re.compile(r'SessionKey=([\w]*)')
+    pattern = re.compile(r'Session[\w]*=([\w]*)')
     r.session = pattern.search(r.headers['location']).group(1)
