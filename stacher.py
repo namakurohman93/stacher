@@ -1,9 +1,9 @@
 import json
 import time
 import datetime
-import requests
 
 from accounts import Account
+from connections import get, post
 from hooks import get_msid, get_token, get_session
 
 class Stacher:
@@ -27,39 +27,39 @@ class Stacher:
             'accept-encoding' : 'gzip, deflate, br',
             'accept-language': 'en-US,en;q=0.5'
         }
-        r = requests.get(url,
-                         headers=headers,
-                         hooks={'response': get_msid},
-                         timeout=60
-                        )
+        r = get(url,
+                headers=headers,
+                hooks={'response': get_msid},
+                timeout=60
+               )
 
         account.msid = r.msid
 
         # looking session lobby
         url = f'https://mellon-t5.traviangames.com/authentication/login/ajax/form-validate?msid={account.msid}&msname=msid'
-        r = requests.post(url,
-                          headers=headers,
-                          data={
-                                'email': email,
-                                'password': password
-                               },
-                          hooks={'response': get_token},
-                          timeout=60
-                         )
+        r = post(url,
+                 headers=headers,
+                 data={
+                       'email': email,
+                       'password': password
+                      },
+                 hooks={'response': get_token},
+                 timeout=60
+                )
 
         headers['cookie'] = f'msid={account.msid};'
 
-        r = requests.get(r.url_token,
-                         headers=headers,
-                         timeout=60,
-                         allow_redirects=False
-                        )
-        r = requests.get(r.headers['location'],
-                         headers=headers,
-                         hooks={'response': get_session},
-                         timeout=60,
-                         allow_redirects=False
-                        )
+        r = get(r.url_token,
+                headers=headers,
+                timeout=60,
+                allow_redirects=False
+               )
+        r = get(r.headers['location'],
+                headers=headers,
+                hooks={'response': get_session},
+                timeout=60,
+                allow_redirects=False
+               )
 
         account.session_lobby = r.session
 
@@ -82,12 +82,12 @@ class Stacher:
                 'session': account.session_lobby
         }
 
-        r = requests.post(lobby_url,
-                          headers=headers,
-                          json=data,
-                          cookies=cookies,
-                          timeout=60
-                         )
+        r = post(lobby_url,
+                 headers=headers,
+                 json=data,
+                 cookies=cookies,
+                 timeout=60
+                )
 
         avatar_list = [avatar for caches in r.json()['cache']       # implicit list comprehension
                        if 'Collection:Avatar:' in caches['name']    # for fetching Collection Avatar
@@ -99,19 +99,19 @@ class Stacher:
                 break
 
         url = f'https://mellon-t5.traviangames.com/game-world/join/gameWorldId/{gameworld_id}?msname=msid&msid={account.msid}'
-        r = requests.get(url,
-                         headers=headers,
-                         cookies=cookies,
-                         hooks={'response': get_token},
-                         timeout=60
-                        )
-        r = requests.get(r.url_token,
-                         headers=headers,
-                         cookies=cookies,
-                         hooks={'response': get_session},
-                         timeout=60,
-                         allow_redirects=False
-                        )
+        r = get(url,
+                headers=headers,
+                cookies=cookies,
+                hooks={'response': get_token},
+                timeout=60
+               )
+        r = get(r.url_token,
+                headers=headers,
+                cookies=cookies,
+                hooks={'response': get_session},
+                timeout=60,
+                allow_redirects=False
+               )
 
         account.session_gameworld = r.session
 
@@ -142,12 +142,12 @@ class Stacher:
                           },
                 'session': self.account.session_gameworld
                }
-        r = requests.post(gameworld_api+f'c=ranking&a=getRankAndCount&t{(time.time()*1000):.0f}',
-                          headers=self.account.headers_gameworld,
-                          json=data,
-                          cookies=self.account.cookies_gameworld,
-                          timeout=60
-                         )
+        r = post(gameworld_api+f'c=ranking&a=getRankAndCount&t{(time.time()*1000):.0f}',
+                 headers=self.account.headers_gameworld,
+                 json=data,
+                 cookies=self.account.cookies_gameworld,
+                 timeout=60
+                )
 
         max_player = r.json()['response']['numberOfItems']
         start, end = 0, 9
@@ -165,12 +165,12 @@ class Stacher:
                               },
                     'session': self.account.session_gameworld
                    }
-            r = requests.post(gameworld_api+f'c=ranking&a=getRanking&t{(time.time()*1000):.0f}',
-                              headers=self.account.headers_gameworld,
-                              json=data,
-                              cookies=self.account.cookies_gameworld,
-                              timeout=60
-                             )
+            r = post(gameworld_api+f'c=ranking&a=getRanking&t{(time.time()*1000):.0f}',
+                     headers=self.account.headers_gameworld,
+                     json=data,
+                     cookies=self.account.cookies_gameworld,
+                     timeout=60
+                    )
 
             for result in r.json()['response']['results']:
                 results.append(result)

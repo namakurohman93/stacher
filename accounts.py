@@ -1,4 +1,4 @@
-import requests
+from connections import get, post
 
 class Account:
     def __init__(self):
@@ -20,14 +20,14 @@ class Account:
                 'params': {},
                 'session': self.session_gameworld
                }
-        r = requests.post(gameworld_api,
+        r = post(gameworld_api,
                           headers=self.headers_gameworld,
                           json=data,
                           timeout=60
                          )
         avatar_detail = {k: v for cache in r.json()['cache']  # implicit dictionary comprehension
-                       if 'Player:' in cache['name']         # for fetching avatar detail
-                       for k, v in cache['data'].items()
-                      }
+                         if 'Player:' in cache['name']        # for fetching avatar detail
+                         for k, v in cache['data'].items()
+                        }
 
         return avatar_detail
