@@ -1,6 +1,8 @@
 import json
 import time
 import datetime
+from threading import Thread
+from queue import Queue
 
 from accounts import Account
 from connections import get, post
@@ -129,23 +131,51 @@ class Stacher:
 
         return account
 
+    @staticmethod
+    def _stacher_thread(task, ranking_type, ranking_subtype, account, url):
+        while True:
+            start, end, results = task.get()
+            print(f'{(time.time()*1000):.0f}')
+            data = {
+                    'controller': 'ranking',
+                    'action': 'getRanking',
+                    'params': {
+                               'start': start,
+                               'end': end,
+                               'rankingType': ranking_type,
+                               'rankingSubType': ranking_subtype
+                              },
+                    'session': account.session_gameworld
+                   }
+            r = post(url+f'c=ranking&a=getRanking&t{(time.time()*1000):.0f}',
+                     headers=account.headers_gameworld,
+                     json=data,
+                     cookies=account.cookies_gameworld,
+                     timeout=60
+                    )
+            results.extend(r.json()['response']['results'])
+            task.task_done()
+
     def get_pop_ranking(self):
-        gameworld_api = f'https://{self.gameworld.lower()}.kingdoms.com/api/?'
-        avatar = self.account.avatar(self.gameworld)
+        account = self.account
+        url = f'https://{self.gameworld.lower()}.kingdoms.com/api/?'
+        avatar = account.avatar(self.gameworld)
+        ranking_type = 'ranking_Player'
+        ranking_subtype = 'population'
         data = {
                 'controller': 'ranking',
                 'action': 'getRankAndCount',
                 'params': {
                            'id': avatar['playerId'],
-                           'rankingType': 'ranking_Player',
-                           'rankingSubtype': 'population'
+                           'rankingType': ranking_type,
+                           'rankingSubtype': ranking_subtype
                           },
-                'session': self.account.session_gameworld
+                'session': account.session_gameworld
                }
-        r = post(gameworld_api+f'c=ranking&a=getRankAndCount&t{(time.time()*1000):.0f}',
-                 headers=self.account.headers_gameworld,
+        r = post(url+f'c=ranking&a=getRankAndCount&t{(time.time()*1000):.0f}',
+                 headers=account.headers_gameworld,
                  json=data,
-                 cookies=self.account.cookies_gameworld,
+                 cookies=account.cookies_gameworld,
                  timeout=60
                 )
 
@@ -153,28 +183,23 @@ class Stacher:
         start, end = 0, 9
         results = []
 
-        for _ in range((max_player//10)+1):
-            data = {
-                    'controller': 'ranking',
-                    'action': 'getRanking',
-                    'params': {
-                               'start': start,
-                               'end': end,
-                               'rankingType': 'ranking_Player',
-                               'rankingSubType': 'population'
-                              },
-                    'session': self.account.session_gameworld
-                   }
-            r = post(gameworld_api+f'c=ranking&a=getRanking&t{(time.time()*1000):.0f}',
-                     headers=self.account.headers_gameworld,
-                     json=data,
-                     cookies=self.account.cookies_gameworld,
-                     timeout=60
-                    )
+        task = Queue(maxsize=(max_player//10)+2)
 
-            for result in r.json()['response']['results']:
-                results.append(result)
+        for _ in range(5):
+            worker = Thread(target=self._stacher_thread,
+                            args=(task, ranking_type,
+                                  ranking_subtype, account, url
+                                 )
+                           )
+            worker.setDaemon(True)
+            worker.start()
+
+        for _ in range((max_player//10)+1):
+            task.put((start, end, results))
+            time.sleep(0.1)
             start, end = start+10, end+10
+
+        task.join()
 
         pop_ranking = {'date': datetime.datetime.now().strftime("%Y-%m-%d"),
                        'time': datetime.datetime.now().strftime("%H:%M:%S"),
