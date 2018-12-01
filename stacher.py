@@ -7,6 +7,8 @@ from queue import Queue
 from accounts import Account
 from connections import get, post
 from hooks import get_msid, get_token, get_session
+from utils import subtypes
+
 
 class Stacher:
     def __init__(self, email, password, gameworld):
@@ -15,10 +17,17 @@ class Stacher:
         self.gameworld = gameworld.upper()
 
         self.account = self.login(self.email, self.password, self.gameworld)
+        self.avatar = self.account.avatar(self.gameworld)
 
-        self.get_pop_ranking()
+        for subtype, file_name in subtypes():
+            self.get_ranking(self.account, self.avatar,
+                             'ranking_Player', subtype,
+                             file_name, self.gameworld
+                            )
 
-    def login(self, email, password, gameworld):
+
+    @staticmethod
+    def login(email, password, gameworld):
 
         account = Account()
 
@@ -76,7 +85,6 @@ class Stacher:
         account.headers_lobby = headers
 
         # looking session gameworld
-        lobby_url = 'https://lobby.kingdoms.com/api/index.php'
         data = {
                 'action': 'getAll',
                 'controller': 'player',
@@ -84,7 +92,7 @@ class Stacher:
                 'session': account.session_lobby
         }
 
-        r = post(lobby_url,
+        r = post(account.lobby_api,
                  headers=headers,
                  json=data,
                  cookies=cookies,
@@ -131,8 +139,9 @@ class Stacher:
 
         return account
 
+
     @staticmethod
-    def _stacher_thread(task, ranking_type, ranking_subtype, account, url):
+    def stacher_thread(task, ranking_type, ranking_subtype, account, url):
         while True:
             start, end, results = task.get()
             print(f'{(time.time()*1000):.0f}')
@@ -143,7 +152,7 @@ class Stacher:
                                'start': start,
                                'end': end,
                                'rankingType': ranking_type,
-                               'rankingSubType': ranking_subtype
+                               'rankingSubtype': ranking_subtype
                               },
                     'session': account.session_gameworld
                    }
@@ -156,12 +165,12 @@ class Stacher:
             results.extend(r.json()['response']['results'])
             task.task_done()
 
-    def get_pop_ranking(self):
-        account = self.account
-        url = f'https://{self.gameworld.lower()}.kingdoms.com/api/?'
-        avatar = account.avatar(self.gameworld)
-        ranking_type = 'ranking_Player'
-        ranking_subtype = 'population'
+
+    @staticmethod
+    def get_ranking(account, avatar, ranking_type,
+                    ranking_subtype, file_name, gameworld):
+        # get total player
+        url = account.gameworld_api % (gameworld.lower(),)
         data = {
                 'controller': 'ranking',
                 'action': 'getRankAndCount',
@@ -178,15 +187,15 @@ class Stacher:
                  cookies=account.cookies_gameworld,
                  timeout=60
                 )
+        total_player = r.json()['response']['numberOfItems']
 
-        max_player = r.json()['response']['numberOfItems']
+        # prepare thread
         start, end = 0, 9
         results = []
+        task = Queue(maxsize=(total_player//10)+2)
 
-        task = Queue(maxsize=(max_player//10)+2)
-
-        for _ in range(5):
-            worker = Thread(target=self._stacher_thread,
+        for _ in range(8):  # if need more fast, increase range number
+            worker = Thread(target=Stacher.stacher_thread,
                             args=(task, ranking_type,
                                   ranking_subtype, account, url
                                  )
@@ -194,11 +203,13 @@ class Stacher:
             worker.setDaemon(True)
             worker.start()
 
-        for _ in range((max_player//10)+1):
+        # dispatch thread
+        for _ in range((total_player//10)+1):
             task.put((start, end, results))
             time.sleep(0.1)
             start, end = start+10, end+10
 
+        # threading done
         task.join()
 
         pop_ranking = {'date': datetime.datetime.now().strftime("%Y-%m-%d"),
@@ -206,5 +217,5 @@ class Stacher:
                        'results': results
                       }
 
-        with open(r'/home/didadadida93/Desktop/pop_ranking.json', 'w') as f:
+        with open(f'/home/didadadida93/Desktop/{file_name}.json', 'w') as f:
             f.write(json.dumps(pop_ranking, indent=4))

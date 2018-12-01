@@ -3,6 +3,7 @@ import functools
 
 from exceptions import GetError
 
+
 def connection(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -14,10 +15,12 @@ def connection(func):
         return r
     return wrapper
 
+
 @connection
 def get(*args, **kwargs):
     r = requests.get(*args, **kwargs)
     return r
+
 
 @connection
 def post(*args, **kwargs):
