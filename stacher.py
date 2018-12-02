@@ -215,7 +215,7 @@ class Stacher:
         # threading done
         task.join()
 
-        pop_ranking = '\n'.join(results)
+        ranking = '\n'.join(results)
 
         with open(f'/home/didadadida93/Desktop/{file_name}.log', 'a') as f:
-            f.write(pop_ranking)
+            f.write(ranking)
