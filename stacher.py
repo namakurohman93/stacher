@@ -162,7 +162,10 @@ class Stacher:
                      cookies=account.cookies_gameworld,
                      timeout=60
                     )
-            results.extend(r.json()['response']['results'])
+            result = [f'{datetime.datetime.now().strftime("%d/%b/%Y:%H:%M:%S")} {x["name"]} {x["points"]}'
+                      for x in r.json()['response']['results']
+                     ]
+            results.extend(result)
             task.task_done()
 
 
@@ -212,10 +215,7 @@ class Stacher:
         # threading done
         task.join()
 
-        pop_ranking = {'date': datetime.datetime.now().strftime("%Y-%m-%d"),
-                       'time': datetime.datetime.now().strftime("%H:%M:%S"),
-                       'results': results
-                      }
+        pop_ranking = '\n'.join(results)
 
-        with open(f'/home/didadadida93/Desktop/{file_name}.json', 'w') as f:
-            f.write(json.dumps(pop_ranking, indent=4))
+        with open(f'/home/didadadida93/Desktop/{file_name}.log', 'a') as f:
+            f.write(pop_ranking)
