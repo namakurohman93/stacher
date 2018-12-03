@@ -7,17 +7,17 @@ from queue import Queue
 from accounts import Account
 from connections import get, post
 from hooks import get_msid, get_token, get_session
-from utils import subtypes
+from utils import subtypes, check_account, create_path
 
 
 class Stacher:
     def __init__(self, email, password, gameworld):
         self.email = email
         self.password = password
-        self.gameworld = gameworld.upper()
+        self.gameworld = gameworld
 
-        self.account = self.login(self.email, self.password, self.gameworld)
-        self.avatar = self.account.avatar(self.gameworld)
+        self.account = check_account(self.login, email, password, gameworld)
+        self.avatar = self.account.avatar(gameworld)
 
         for subtype, file_name in subtypes():
             self.get_ranking(self.account, self.avatar,
@@ -28,7 +28,9 @@ class Stacher:
 
     @staticmethod
     def login(email, password, gameworld):
-
+        email = email
+        password = password
+        gameworld = gameworld.upper()
         account = Account()
 
         # looking msid
@@ -216,6 +218,13 @@ class Stacher:
         task.join()
 
         ranking = '\n'.join(results)
-
-        with open(f'/home/didadadida93/Desktop/{file_name}.log', 'a') as f:
+        path = create_path(file_name)
+        with open(path, 'a') as f:
             f.write(ranking)
+
+"""
+TODO:
+    * make the gameworld details (cookies, headers, session)
+      into an instance attribute so Stacher can login into two
+      or more gameworld.
+"""
