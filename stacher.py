@@ -1,37 +1,50 @@
-import json
 import time
 import datetime
 from threading import Thread
 from queue import Queue
 
-from accounts import Account
+from accounts import Account, lobby_get_all
 from connections import get, post
 from hooks import get_msid, get_token, get_session
 from utils import subtypes, check_account, create_path
 
 
 class Stacher:
-    def __init__(self, email, password, gameworld):
+    def __init__(self, email=None, password=None):
         self.email = email
         self.password = password
-        self.gameworld = gameworld
 
-        self.account = check_account(self.login, email, password, gameworld)
-        self.avatar = self.account.avatar(gameworld)
+        self.account = check_account(self.login, self.email,
+                                     self.password, self.test_login)
+        # self.interface()
+        gameworld = input('Gameworld: ')
+        self.avatar = self.account.build_avatar(gameworld)
+        # avatar_detail = self.avatar.avatar()
 
         for subtype, file_name in subtypes():
-            self.get_ranking(self.account, self.avatar,
-                             'ranking_Player', subtype,
-                             file_name, self.gameworld
+            self.get_ranking(self.avatar, 'ranking_Player',
+                             subtype, file_name
                             )
 
 
+    def interface(self):
+        while True:
+            try:
+                eval(input('Stacher > '))
+            except Exception as e:
+                print(e)
+                pass
+
+
     @staticmethod
-    def login(email, password, gameworld):
-        email = email
-        password = password
-        gameworld = gameworld.upper()
+    def login(email, password):
+        while not email:
+            email = input('Email: ')
+        while not password:
+            password = input('Password: ')
+
         account = Account()
+        account.email = email
 
         # looking msid
         url = 'https://mellon-t5.traviangames.com/authentication/login/ajax/form-validate?'
@@ -77,7 +90,6 @@ class Stacher:
         account.session_lobby = r.session
 
         # set cookies & headers lobby
-        cookies = r.cookies
         account.cookies_lobby = r.cookies
 
         temp_cookie = {k: v for k, v in r.cookies.items()}
@@ -86,64 +98,37 @@ class Stacher:
 
         account.headers_lobby = headers
 
-        # looking session gameworld
-        data = {
-                'action': 'getAll',
-                'controller': 'player',
-                'params': {},
-                'session': account.session_lobby
-        }
-
-        r = post(account.lobby_api,
-                 headers=headers,
-                 json=data,
-                 cookies=cookies,
-                 timeout=60
-                )
-
-        avatar_list = [avatar for caches in r.json()['cache']       # implicit list comprehension
-                       if 'Collection:Avatar:' in caches['name']    # for fetching Collection Avatar
-                       for avatar in caches['data']['cache']
-                      ]
-        for cache in avatar_list:
-            if gameworld == cache['data']['worldName']:
-                gameworld_id = cache['data']['consumersId']
-                break
-
-        url = f'https://mellon-t5.traviangames.com/game-world/join/gameWorldId/{gameworld_id}?msname=msid&msid={account.msid}'
-        r = get(url,
-                headers=headers,
-                cookies=cookies,
-                hooks={'response': get_token},
-                timeout=60
-               )
-        r = get(r.url_token,
-                headers=headers,
-                cookies=cookies,
-                hooks={'response': get_session},
-                timeout=60,
-                allow_redirects=False
-               )
-
-        account.session_gameworld = r.session
-
-        # set cookies & headers gameworld
-        account.cookies_gameworld = r.cookies
-
-        for k, v in r.cookies.items():
-            if k in headers['cookie']:
-                continue
-            headers['cookie'] += f' {k}={v};'
-        headers['accept'] = 'application/json, text/plain, */*'
-        headers['content-type'] = 'application/json;charset=utf-8'
-
-        account.headers_gameworld = headers
+        lobby_details = lobby_get_all(account)
+        account.details = {k: v for caches in lobby_details['cache']    # implicit dictionary comprehension
+                           if 'Player:' in caches['name']               # for fetching account details
+                           for k, v in caches['data'].items()
+                          }
+        del lobby_details
 
         return account
 
 
     @staticmethod
-    def stacher_thread(task, ranking_type, ranking_subtype, account, url):
+    def test_login(account):
+        data = {
+                'action': 'getPossibleNewGameworlds',
+                'controller': 'gameworld',
+                'params': {},
+                'session': account.session_lobby
+               }
+        r = post(account.lobby_api,
+                 headers=account.headers_lobby,
+                 json=data,
+                 cookies=account.cookies_lobby,
+                 timeout=60
+                )
+
+        return 'error' in r.json()
+
+
+    @staticmethod
+    def stacher_thread(task, ranking_type,
+                       ranking_subtype, avatar, url):
         while True:
             start, end, results = task.get()
             print(f'{(time.time()*1000):.0f}')
@@ -156,12 +141,12 @@ class Stacher:
                                'rankingType': ranking_type,
                                'rankingSubtype': ranking_subtype
                               },
-                    'session': account.session_gameworld
+                    'session': avatar.session_gameworld
                    }
             r = post(url+f'c=ranking&a=getRanking&t{(time.time()*1000):.0f}',
-                     headers=account.headers_gameworld,
+                     headers=avatar.headers_gameworld,
                      json=data,
-                     cookies=account.cookies_gameworld,
+                     cookies=avatar.cookies_gameworld,
                      timeout=60
                     )
             result = [f'{datetime.datetime.now().strftime("%d/%b/%Y:%H:%M:%S")} {x["name"]} {x["points"]}'
@@ -172,24 +157,24 @@ class Stacher:
 
 
     @staticmethod
-    def get_ranking(account, avatar, ranking_type,
-                    ranking_subtype, file_name, gameworld):
+    def get_ranking(avatar, ranking_type,
+                    ranking_subtype, file_name):
         # get total player
-        url = account.gameworld_api % (gameworld.lower(),)
+        url = avatar.gameworld_api % (avatar.gameworld.lower(),)
         data = {
                 'controller': 'ranking',
                 'action': 'getRankAndCount',
                 'params': {
-                           'id': avatar['playerId'],
+                           'id': avatar.details['playerId'],
                            'rankingType': ranking_type,
                            'rankingSubtype': ranking_subtype
                           },
-                'session': account.session_gameworld
+                'session': avatar.session_gameworld
                }
         r = post(url+f'c=ranking&a=getRankAndCount&t{(time.time()*1000):.0f}',
-                 headers=account.headers_gameworld,
+                 headers=avatar.headers_gameworld,
                  json=data,
-                 cookies=account.cookies_gameworld,
+                 cookies=avatar.cookies_gameworld,
                  timeout=60
                 )
         total_player = r.json()['response']['numberOfItems']
@@ -202,7 +187,7 @@ class Stacher:
         for _ in range(8):  # if need more fast, increase range number
             worker = Thread(target=Stacher.stacher_thread,
                             args=(task, ranking_type,
-                                  ranking_subtype, account, url
+                                  ranking_subtype, avatar, url
                                  )
                            )
             worker.setDaemon(True)
@@ -218,13 +203,14 @@ class Stacher:
         task.join()
 
         ranking = '\n'.join(results)
-        path = create_path(file_name)
+        path = create_path(avatar.gameworld, avatar.gameworld_id,
+                           file_name)
         with open(path, 'a') as f:
             f.write(ranking)
+            f.write('\n')
 
 """
 TODO:
-    * make the gameworld details (cookies, headers, session)
-      into an instance attribute so Stacher can login into two
-      or more gameworld.
+    * implement Avatar class into thread object
+      so Stacher can staching on every gameworld.
 """

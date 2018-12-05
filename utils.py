@@ -6,7 +6,6 @@ SUBTYPE_and_FILENAME = (
                         ('offPoints', 'off_ranking'),
                         ('deffPoints', 'deff_ranking')
                        )
-# RANKING_TYPE = 'ranking_Player'
 
 
 def subtypes():
@@ -24,14 +23,21 @@ def load_account():
     return account
 
 
-def check_account(login, email, password, gameworld):
+def check_account(login, email, password, test_account):
     if 'account.py' not in os.listdir(os.getcwd()):
-        account = login(email, password, gameworld)
+        account = login(email, password)
         save_account(account)
+        print(f'Welcome!!! {account.details["avatarName"]}')
     else:
         account = load_account()
+        if test_account(account):
+            account = login(email, password)
+            save_account(account)
+            print(f'Welcome!!! {account.details["avatarName"]}')
+        else:
+            print(f'Welcome back!! {account.details["avatarName"]}')
     return account
 
 
-def create_path(file_name):
-    return os.path.join(os.path.expanduser('~/Desktop'), f'{file_name}.log')
+def create_path(gameworld, gameworld_id, file_name):
+    return os.path.join(os.path.expanduser('~/Desktop'), f'{gameworld}_{gameworld_id}_{file_name}.log')

@@ -1,8 +1,6 @@
 import requests
 import functools
 
-from exceptions import GetError
-
 
 def connection(func):
     @functools.wraps(func)
@@ -10,8 +8,7 @@ def connection(func):
         try:
             r = func(*args, **kwargs)
         except Exception as e:
-            error = f'Exception occurs in function: {func.__name__}. Exception: {e}.'
-            raise GetError(error)
+            raise
         return r
     return wrapper
 
