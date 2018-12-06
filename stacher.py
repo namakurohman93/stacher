@@ -1,3 +1,4 @@
+import os
 import time
 import datetime
 from threading import Thread
@@ -6,7 +7,7 @@ from queue import Queue
 from accounts import Account, Avatar, lobby_get_all
 from connections import get, post
 from hooks import get_msid, get_token, get_session
-from utils import subtypes, check_account, create_path
+from utils import save_account, load_account, create_path
 
 
 class Stacher:
@@ -14,18 +15,9 @@ class Stacher:
         self.email = email
         self.password = password
 
-        self.account = check_account(self.login, self.email,
-                                     self.password, self.test_login
-                                    )
-        self.command_line()
-        # gameworld = input('Gameworld: ')
-        # self.avatar = self.account.build_avatar(gameworld)
-        # avatar_detail = self.avatar.avatar()
+        self.account = self.check_account(self.email, self.password)
 
-        # for subtype, file_name in subtypes():
-        #     self.get_ranking(self.avatar, 'ranking_Player',
-        #                      subtype, file_name
-        #                     )
+        self.command_line()
 
 
     def command_line(self):
@@ -34,7 +26,23 @@ class Stacher:
             avatar = Avatar(self.get_ranking, self.account,
                             gameworld
                            ).start()
-            # avatar.join()
+
+
+    def check_account(self, email, password):
+        if 'account.py' not in os.listdir(os.getcwd()):
+            account = self.login(email, password)
+            save_account(account)
+            print(f'Welcome!!! {account.details["avatarName"]}')
+        else:
+            account = load_account()
+            if self.test_login(account):
+                account = self.login(email, password)
+                save_account(account)
+                print(f'Welcome!!! {account.details["avatarName"]}')
+            else:
+                print(f'Welcome back!! {account.details["avatarName"]}')
+
+        return account
 
 
     @staticmethod
@@ -99,7 +107,7 @@ class Stacher:
 
         account.headers_lobby = headers
 
-        lobby_details = lobby_get_all(account)
+        lobby_details = lobby_get_all(account, state='lobby')
         account.details = {k: v for caches in lobby_details['cache']    # implicit dictionary comprehension
                            if 'Player:' in caches['name']               # for fetching account details
                            for k, v in caches['data'].items()
@@ -111,20 +119,8 @@ class Stacher:
 
     @staticmethod
     def test_login(account):
-        data = {
-                'action': 'getPossibleNewGameworlds',
-                'controller': 'gameworld',
-                'params': {},
-                'session': account.session_lobby
-               }
-        r = post(account.lobby_api,
-                 headers=account.headers_lobby,
-                 json=data,
-                 cookies=account.cookies_lobby,
-                 timeout=60
-                )
-
-        return 'error' in r.json()
+        
+        return 'error' in lobby_get_all(account, state='lobby')
 
 
     @staticmethod

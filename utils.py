@@ -23,21 +23,5 @@ def load_account():
     return account
 
 
-def check_account(login, email, password, test_account):
-    if 'account.py' not in os.listdir(os.getcwd()):
-        account = login(email, password)
-        save_account(account)
-        print(f'Welcome!!! {account.details["avatarName"]}')
-    else:
-        account = load_account()
-        if test_account(account):
-            account = login(email, password)
-            save_account(account)
-            print(f'Welcome!!! {account.details["avatarName"]}')
-        else:
-            print(f'Welcome back!! {account.details["avatarName"]}')
-    return account
-
-
 def create_path(gameworld, gameworld_id, file_name):
     return os.path.join(os.path.expanduser('~/Desktop'), f'{gameworld}_{gameworld_id}_{file_name}.log')

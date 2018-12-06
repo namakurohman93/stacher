@@ -37,7 +37,7 @@ class Avatar(threading.Thread):
 
     def login(self):
         # looking session gameworld
-        lobby_details = lobby_get_all(self)
+        lobby_details = lobby_get_all(self, state='lobby')
         avatar_list = [avatar for caches in lobby_details['cache']  # implicit list comprehension
                        if 'Collection:Avatar:' in caches['name']    # for fetching Collection Avatar
                        for avatar in caches['data']['cache']
@@ -78,21 +78,9 @@ class Avatar(threading.Thread):
         self.headers_gameworld['accept'] = 'application/json, text/plain, */*'
         self.headers_gameworld['content-type'] = 'application/json;charset=utf-8'
 
-        url = self.gameworld_api % (self.gameworld.lower(),)
-        data = {
-                'controller': 'player',
-                'action': 'getAll',
-                'params': {},
-                'session': self.session_gameworld
-               }
-        r = post(url,
-                 headers=self.headers_gameworld,
-                 json=data,
-                 cookies=self.cookies_gameworld,
-                 timeout=60
-                )
-        self.details = {k: v for cache in r.json()['cache']  # implicit dictionary comprehension
-                        if 'Player:' in cache['name']       # for fetching avatar detail
+        gameworld_details = lobby_get_all(self, state='gameworld')
+        self.details = {k: v for cache in gameworld_details['cache']  # implicit dictionary comprehension
+                        if 'Player:' in cache['name']                 # for fetching avatar detail
                         for k, v in cache['data'].items()
                        }
 
@@ -110,18 +98,34 @@ class Avatar(threading.Thread):
             time.sleep(3600)
 
 
-def lobby_get_all(obj):
+def lobby_get_all(obj, state=None):
+    url = obj.lobby_api if state == 'lobby' else \
+        obj.gameworld_api % (obj.gameworld.lower(),) if state == 'gameworld' else \
+        None
+
+    session = obj.session_lobby if state == 'lobby' else \
+        obj.session_gameworld if state == 'gameworld' else \
+        None
+
+    headers = obj.headers_lobby if state == 'lobby' else \
+        obj.headers_gameworld if state == 'gameworld' else \
+        None
+
+    cookies = obj.cookies_lobby if state == 'lobby' else \
+        obj.cookies_gameworld if state == 'gameworld' else \
+        None
+
     data = {
             'action': 'getAll',
             'controller': 'player',
             'params': {},
-            'session': obj.session_lobby
+            'session': session
            }
 
-    r = post(obj.lobby_api,
-             headers=obj.headers_lobby,
+    r = post(url,
+             headers=headers,
              json=data,
-             cookies=obj.cookies_lobby,
+             cookies=cookies,
              timeout=60
             )
 
