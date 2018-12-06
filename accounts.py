@@ -1,5 +1,9 @@
+import time
+import threading
+
 from connections import get, post
 from hooks import get_token, get_session
+from utils import subtypes
 
 
 class Account:
@@ -15,17 +19,15 @@ class Account:
         self.gameworld_api = 'https://%s.kingdoms.com/api/?'
 
 
-    def build_avatar(self, gameworld):
-        return Avatar(self, gameworld)
-
-
-class Avatar:
+class Avatar(threading.Thread):
     __attrs__ = ['email', 'msid', 'session_lobby', 'cookies_lobby',
                  'headers_lobby', 'lobby_api', 'gameworld_api'
                 ]
 
 
-    def __init__(self, account, gameworld):
+    def __init__(self, get_ranking, account, gameworld):
+        threading.Thread.__init__(self, name=gameworld, daemon=True)
+        self.get_ranking = get_ranking
         self.gameworld = gameworld.upper()
         for attr in self.__attrs__:
             setattr(self, attr, getattr(account, attr, None))
@@ -86,12 +88,26 @@ class Avatar:
         r = post(url,
                  headers=self.headers_gameworld,
                  json=data,
+                 cookies=self.cookies_gameworld,
                  timeout=60
                 )
         self.details = {k: v for cache in r.json()['cache']  # implicit dictionary comprehension
-                         if 'Player:' in cache['name']       # for fetching avatar detail
-                         for k, v in cache['data'].items()
-                        }
+                        if 'Player:' in cache['name']       # for fetching avatar detail
+                        for k, v in cache['data'].items()
+                       }
+
+
+    def run(self):
+        # first adjust time
+        interval = 3600 - (int(f'{(time.time()):.0f}')%3600)
+        time.sleep(interval)
+        print(threading.current_thread())
+        while True:
+            for subtype, file_name in subtypes():
+                self.get_ranking(self, 'ranking_Player',
+                                 subtype, file_name
+                                )
+            time.sleep(3600)
 
 
 def lobby_get_all(obj):

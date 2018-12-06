@@ -3,7 +3,7 @@ import datetime
 from threading import Thread
 from queue import Queue
 
-from accounts import Account, lobby_get_all
+from accounts import Account, Avatar, lobby_get_all
 from connections import get, post
 from hooks import get_msid, get_token, get_session
 from utils import subtypes, check_account, create_path
@@ -15,25 +15,26 @@ class Stacher:
         self.password = password
 
         self.account = check_account(self.login, self.email,
-                                     self.password, self.test_login)
-        # self.interface()
-        gameworld = input('Gameworld: ')
-        self.avatar = self.account.build_avatar(gameworld)
+                                     self.password, self.test_login
+                                    )
+        self.command_line()
+        # gameworld = input('Gameworld: ')
+        # self.avatar = self.account.build_avatar(gameworld)
         # avatar_detail = self.avatar.avatar()
 
-        for subtype, file_name in subtypes():
-            self.get_ranking(self.avatar, 'ranking_Player',
-                             subtype, file_name
-                            )
+        # for subtype, file_name in subtypes():
+        #     self.get_ranking(self.avatar, 'ranking_Player',
+        #                      subtype, file_name
+        #                     )
 
 
-    def interface(self):
+    def command_line(self):
         while True:
-            try:
-                eval(input('Stacher > '))
-            except Exception as e:
-                print(e)
-                pass
+            gameworld = input()
+            avatar = Avatar(self.get_ranking, self.account,
+                            gameworld
+                           ).start()
+            # avatar.join()
 
 
     @staticmethod
@@ -131,7 +132,7 @@ class Stacher:
                        ranking_subtype, avatar, url):
         while True:
             start, end, results = task.get()
-            print(f'{(time.time()*1000):.0f}')
+            # print(f'{(time.time()*1000):.0f}')
             data = {
                     'controller': 'ranking',
                     'action': 'getRanking',
@@ -203,14 +204,10 @@ class Stacher:
         task.join()
 
         ranking = '\n'.join(results)
-        path = create_path(avatar.gameworld, avatar.gameworld_id,
-                           file_name)
+        path = create_path(avatar.gameworld,
+                           avatar.gameworld_id, file_name
+                          )
         with open(path, 'a') as f:
             f.write(ranking)
             f.write('\n')
-
-"""
-TODO:
-    * implement Avatar class into thread object
-      so Stacher can staching on every gameworld.
-"""
+        print(f'{avatar.gameworld}_{avatar.gameworld_id}_{file_name} done.')
