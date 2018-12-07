@@ -101,14 +101,19 @@ class Avatar(threading.Thread):
     def run(self):
         # first adjust time
         interval = 3600 - (int(f'{(time.time()):.0f}')%3600)
+        print(f'{threading.current_thread()}' +
+              f' [sleeping:{interval//60}:{interval%60}]')
         time.sleep(interval)
-        print(threading.current_thread())
         while True:
+            print(f'{threading.current_thread()} [starting]')
             for subtype, file_name in subtypes():
                 self.get_ranking(self, 'ranking_Player',
                                  subtype, file_name
                                 )
-            time.sleep(3600)
+            interval = 3600 - (int(f'{(time.time()):.0f}')%3600)
+            print(f'{threading.current_thread()}' +
+                  f' [sleeping:{interval//60}:{interval%60}]')
+            time.sleep(interval)
 
 
 def data_get_all(obj, state=None):
