@@ -6,6 +6,7 @@ SUBTYPE_and_FILENAME = (
                         ('offPoints', 'off_ranking'),
                         ('deffPoints', 'deff_ranking')
                        )
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def subtypes():
@@ -13,12 +14,14 @@ def subtypes():
 
 
 def save_account(account):
-    with open('account.py', 'wb') as f:
+    path = os.path.join(BASE_DIR, 'account.py')
+    with open(path, 'wb') as f:
         pickle.dump(account, f)
 
 
 def load_account():
-    with open('account.py', 'rb') as f:
+    path = os.path.join(BASE_DIR, 'account.py')
+    with open(path, 'rb') as f:
         account = pickle.load(f)
     return account
 
