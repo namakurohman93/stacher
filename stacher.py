@@ -4,7 +4,7 @@ import datetime
 from threading import Thread
 from queue import Queue
 
-from accounts import Account, Avatar, lobby_get_all
+from accounts import Account, Avatar, data_get_all
 from connections import get, post
 from hooks import get_msid, get_token, get_session
 from utils import save_account, load_account, create_path
@@ -53,7 +53,6 @@ class Stacher:
             password = input('Password: ')
 
         account = Account()
-        account.email = email
 
         # looking msid
         url = 'https://mellon-t5.traviangames.com/authentication/login/ajax/form-validate?'
@@ -107,7 +106,7 @@ class Stacher:
 
         account.headers_lobby = headers
 
-        lobby_details = lobby_get_all(account, state='lobby')
+        lobby_details = data_get_all(account, state='lobby')
         account.details = {k: v for caches in lobby_details['cache']    # implicit dictionary comprehension
                            if 'Player:' in caches['name']               # for fetching account details
                            for k, v in caches['data'].items()
@@ -119,8 +118,8 @@ class Stacher:
 
     @staticmethod
     def test_login(account):
-        
-        return 'error' in lobby_get_all(account, state='lobby')
+
+        return 'error' in data_get_all(account, state='lobby')
 
 
     @staticmethod

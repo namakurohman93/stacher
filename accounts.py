@@ -2,13 +2,13 @@ import time
 import threading
 
 from connections import get, post
+from exceptions import GetError
 from hooks import get_token, get_session
 from utils import subtypes
 
 
 class Account:
     def __init__(self):
-        self.email = None
         self.msid = None
         self.session_lobby = None
         self.cookies_lobby = None
@@ -27,17 +27,25 @@ class Avatar(threading.Thread):
 
     def __init__(self, get_ranking, account, gameworld):
         threading.Thread.__init__(self, name=gameworld, daemon=True)
+
         self.get_ranking = get_ranking
         self.gameworld = gameworld.upper()
+
         for attr in self.__attrs__:
             setattr(self, attr, getattr(account, attr, None))
+
+        self.gameworld_id = None
+        self.session_gameworld = None
+        self.cookies_gameworld = None
+        self.headers_gameworld = None
+        self.details = None
 
         self.login()
 
 
     def login(self):
         # looking session gameworld
-        lobby_details = lobby_get_all(self, state='lobby')
+        lobby_details = data_get_all(self, state='lobby')
         avatar_list = [avatar for caches in lobby_details['cache']  # implicit list comprehension
                        if 'Collection:Avatar:' in caches['name']    # for fetching Collection Avatar
                        for avatar in caches['data']['cache']
@@ -46,6 +54,10 @@ class Avatar(threading.Thread):
             if self.gameworld == cache['data']['worldName']:
                 self.gameworld_id = cache['data']['consumersId']
                 break
+
+        if not self.gameworld_id:
+            error = f'you didnt have avatar at {self.gameworld.lower()}'
+            raise GetError(error)
 
         del lobby_details
         del avatar_list
@@ -78,11 +90,12 @@ class Avatar(threading.Thread):
         self.headers_gameworld['accept'] = 'application/json, text/plain, */*'
         self.headers_gameworld['content-type'] = 'application/json;charset=utf-8'
 
-        gameworld_details = lobby_get_all(self, state='gameworld')
+        gameworld_details = data_get_all(self, state='gameworld')
         self.details = {k: v for cache in gameworld_details['cache']  # implicit dictionary comprehension
                         if 'Player:' in cache['name']                 # for fetching avatar detail
                         for k, v in cache['data'].items()
                        }
+        del gameworld_details
 
 
     def run(self):
@@ -98,7 +111,7 @@ class Avatar(threading.Thread):
             time.sleep(3600)
 
 
-def lobby_get_all(obj, state=None):
+def data_get_all(obj, state=None):
     url = obj.lobby_api if state == 'lobby' else \
         obj.gameworld_api % (obj.gameworld.lower(),) if state == 'gameworld' else \
         None
