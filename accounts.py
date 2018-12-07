@@ -25,10 +25,11 @@ class Avatar(threading.Thread):
                 ]
 
 
-    def __init__(self, get_ranking, account, gameworld):
+    def __init__(self, get_ranking, account, path, gameworld):
         threading.Thread.__init__(self, name=gameworld, daemon=True)
 
         self.get_ranking = get_ranking
+        self.path = path
         self.gameworld = gameworld.upper()
 
         for attr in self.__attrs__:

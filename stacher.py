@@ -11,9 +11,10 @@ from utils import save_account, load_account, create_path
 
 
 class Stacher:
-    def __init__(self, email=None, password=None):
+    def __init__(self, save_path=None, email=None, password=None):
         self.email = email
         self.password = password
+        self.path = save_path
 
         self.account = self.check_account(self.email, self.password)
 
@@ -24,7 +25,7 @@ class Stacher:
         while True:
             gameworld = input()
             avatar = Avatar(self.get_ranking, self.account,
-                            gameworld
+                            self.path, gameworld
                            ).start()
 
 
@@ -199,8 +200,8 @@ class Stacher:
         task.join()
 
         ranking = '\n'.join(results)
-        path = create_path(avatar.gameworld,
-                           avatar.gameworld_id, file_name
+        path = create_path(avatar.gameworld, avatar.gameworld_id,
+                           file_name, avatar.path
                           )
         with open(path, 'a') as f:
             f.write(ranking)

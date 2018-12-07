@@ -26,5 +26,7 @@ def load_account():
     return account
 
 
-def create_path(gameworld, gameworld_id, file_name):
+def create_path(gameworld, gameworld_id, file_name, save_path):
+    if save_path:
+        return os.path.join(save_path, f'{gameworld}_{gameworld_id}_{file_name}.log')
     return os.path.join(os.path.expanduser('~/Desktop'), f'{gameworld}_{gameworld_id}_{file_name}.log')
