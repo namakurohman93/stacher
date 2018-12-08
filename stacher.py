@@ -7,7 +7,7 @@ from queue import Queue
 from accounts import Account, Avatar, data_get_all
 from connections import get, post
 from hooks import get_msid, get_token, get_session
-from utils import save_account, load_account, create_path
+from utils import save_account, load_account, create_path, BASE_DIR
 
 
 class Stacher:
@@ -30,7 +30,7 @@ class Stacher:
 
 
     def check_account(self, email, password):
-        if 'account.py' not in os.listdir(os.getcwd()):
+        if 'account.py' not in os.listdir(BASE_DIR):
             account = self.login(email, password)
             save_account(account)
             print(f'Welcome!!! {account.details["avatarName"]}')
