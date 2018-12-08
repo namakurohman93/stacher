@@ -28,5 +28,31 @@ def load_account():
 
 def create_path(gameworld, gameworld_id, file_name, save_path):
     if save_path:
-        return os.path.join(save_path, f'{gameworld}_{gameworld_id}_{file_name}.log')
-    return os.path.join(os.path.expanduser('~/Desktop'), f'{gameworld}_{gameworld_id}_{file_name}.log')
+        try:
+            os.mkdir(os.path.join(save_path,
+                                  f'{gameworld}_{gameworld_id}'
+                                 )
+                    )
+        finally:
+            return os.path.join(save_path,
+                                f'{gameworld}_{gameworld_id}',
+                                f'{file_name}.log'
+                               )
+    try:
+        os.makedirs(os.path.join(BASE_DIR, 'logs',
+                                 f'{gameworld}_{gameworld_id}'
+                                )
+                   )
+    except FileExistsError:
+        try:
+            os.mkdir(os.path.join(BASE_DIR, 'logs',
+                                  f'{gameworld}_{gameworld_id}'
+                                 )
+                    )
+        except FileExistsError:
+            pass            
+    finally:
+        return os.path.join(BASE_DIR, 'logs',
+                            f'{gameworld}_{gameworld_id}',
+                            f'{file_name}.log'
+                           )
