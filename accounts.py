@@ -4,7 +4,7 @@ import threading
 from connections import get, post
 from exceptions import GetError
 from hooks import get_token, get_session
-from utils import subtypes
+from utils import subtypes, intervals
 
 
 class Account:
@@ -20,7 +20,7 @@ class Account:
 
 
 class Avatar(threading.Thread):
-    __attrs__ = ['email', 'msid', 'session_lobby', 'cookies_lobby',
+    __attrs__ = ['msid', 'session_lobby', 'cookies_lobby',
                  'headers_lobby', 'lobby_api', 'gameworld_api'
                 ]
 
@@ -34,6 +34,8 @@ class Avatar(threading.Thread):
 
         for attr in self.__attrs__:
             setattr(self, attr, getattr(account, attr, None))
+
+        self.gameworld_api = self.gameworld_api % (self.gameworld.lower(),)
 
         self.gameworld_id = None
         self.session_gameworld = None
@@ -101,7 +103,7 @@ class Avatar(threading.Thread):
 
     def run(self):
         # first adjust time
-        interval = 3600 - (int(f'{(time.time()):.0f}')%3600)
+        interval = intervals(10)
         print(f'{threading.current_thread()}' +
               f' [sleeping:{interval//60}:{interval%60}]')
         time.sleep(interval)
@@ -111,7 +113,7 @@ class Avatar(threading.Thread):
                 self.get_ranking(self, 'ranking_Player',
                                  subtype, file_name
                                 )
-            interval = 3600 - (int(f'{(time.time()):.0f}')%3600)
+            interval = intervals(10)
             print(f'{threading.current_thread()}' +
                   f' [sleeping:{interval//60}:{interval%60}]')
             time.sleep(interval)
@@ -119,7 +121,7 @@ class Avatar(threading.Thread):
 
 def data_get_all(obj, state=None):
     url = obj.lobby_api if state == 'lobby' else \
-        obj.gameworld_api % (obj.gameworld.lower(),) if state == 'gameworld' else \
+        obj.gameworld_api if state == 'gameworld' else \
         None
 
     session = obj.session_lobby if state == 'lobby' else \

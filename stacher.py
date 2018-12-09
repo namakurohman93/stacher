@@ -157,7 +157,7 @@ class Stacher:
     def get_ranking(avatar, ranking_type,
                     ranking_subtype, file_name):
         # get total player
-        url = avatar.gameworld_api % (avatar.gameworld.lower(),)
+        url = avatar.gameworld_api
         data = {
                 'controller': 'ranking',
                 'action': 'getRankAndCount',

@@ -1,4 +1,5 @@
 import os
+import time
 import pickle
 
 SUBTYPE_and_FILENAME = (
@@ -50,9 +51,14 @@ def create_path(gameworld, gameworld_id, file_name, save_path):
                                  )
                     )
         except FileExistsError:
-            pass            
+            pass
     finally:
         return os.path.join(BASE_DIR, 'logs',
                             f'{gameworld}_{gameworld_id}',
                             f'{file_name}.log'
                            )
+
+
+def intervals(interval=60): #interval in minutes
+    inter = int(3600 * (interval/60))
+    return inter - (int(f'{(time.time()):.0f}')%inter)
