@@ -109,9 +109,9 @@ class Avatar(threading.Thread):
         time.sleep(interval)
         while True:
             print(f'{threading.current_thread()} [starting]')
-            for subtype, file_name in subtypes():
+            for subtype, table_name in subtypes():
                 self.get_ranking(self, 'ranking_Player',
-                                 subtype, file_name
+                                 subtype, table_name
                                 )
             interval = intervals(10)
             print(f'{threading.current_thread()}' +

@@ -1,7 +1,7 @@
 import os
 import time
-import datetime
 from threading import Thread
+from tinydb import TinyDB, Query
 from queue import Queue
 
 from accounts import Account, Avatar, data_get_all
@@ -146,16 +146,16 @@ class Stacher:
                      cookies=avatar.cookies_gameworld,
                      timeout=60
                     )
-            result = [f'{datetime.datetime.now().strftime("%d/%b/%Y:%H:%M:%S")} {x["name"]} {x["points"]}'
-                      for x in r.json()['response']['results']
-                     ]
-            results.extend(result)
+            # result = [f'{time.strftime("%d/%b/%Y:%H:%M:%S")} {x["name"]} {x["points"]}'
+            #           for x in r.json()['response']['results']
+            #          ]
+            results.extend(r.json()['response']['results'])
             task.task_done()
 
 
     @staticmethod
     def get_ranking(avatar, ranking_type,
-                    ranking_subtype, file_name):
+                    ranking_subtype, table_name):
         # get total player
         url = avatar.gameworld_api
         data = {
@@ -199,11 +199,48 @@ class Stacher:
         # threading done
         task.join()
 
-        ranking = '\n'.join(results)
-        path = create_path(avatar.gameworld, avatar.gameworld_id,
-                           file_name, avatar.path
+        # ranking = '\n'.join(results)
+        path = create_path(avatar.gameworld,
+                           avatar.gameworld_id,
+                           avatar.path
                           )
-        with open(path, 'a') as f:
-            f.write(ranking)
-            f.write('\n')
-        print(f'{avatar.gameworld}_{avatar.gameworld_id}_{file_name} done.')
+        # with open(path, 'a') as f:
+        #     f.write(ranking)
+        #     f.write('\n')
+        db = TinyDB(path)
+        table = db.table(table_name)
+        user = Query()
+
+        for result in results:
+            if table.search(user.name == result['name']):
+                table.update(
+                    append(
+                        'data',
+                        {
+                            'epoch': time.time(),
+                            'datetime': time.strftime("%d/%b/%Y:%H:%M:%S"),
+                            'points': result['points']
+                        }
+                    ),
+                    user.name == result['name']
+                )
+            else:
+                table.insert(
+                    {
+                        'name': result['name'],
+                        'data': [{
+                            'epoch': time.time(),
+                            'datetime': time.strftime("%d/%b/%Y:%H:%M:%S"),
+                            'points': result['points']
+                        }]
+                    }
+                )
+        print(f'{table_name} on {avatar.gameworld} done.')
+
+
+def append(field, n):
+    def transform(doc):
+        # if not isinstance(doc[field], list):
+        #     doc[field] = [doc[field]]
+        doc[field].append(n)
+    return transform

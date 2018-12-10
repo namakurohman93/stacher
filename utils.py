@@ -2,7 +2,7 @@ import os
 import time
 import pickle
 
-SUBTYPE_and_FILENAME = (
+SUBTYPE_and_TABLENAME = (
                         ('population', 'pop_ranking'),
                         ('offPoints', 'off_ranking'),
                         ('deffPoints', 'deff_ranking')
@@ -11,7 +11,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def subtypes():
-    yield from SUBTYPE_and_FILENAME
+    yield from SUBTYPE_and_TABLENAME
 
 
 def save_account(account):
@@ -27,35 +27,29 @@ def load_account():
     return account
 
 
-def create_path(gameworld, gameworld_id, file_name, save_path):
+def create_path(gameworld, gameworld_id, save_path):
     if save_path:
-        try:
-            os.mkdir(os.path.join(save_path,
-                                  f'{gameworld}_{gameworld_id}'
-                                 )
-                    )
-        finally:
-            return os.path.join(save_path,
-                                f'{gameworld}_{gameworld_id}',
-                                f'{file_name}.log'
-                               )
+        return os.path.join(save_path,
+                            f'{gameworld}_{gameworld_id}.json'
+                           )
     try:
-        os.makedirs(os.path.join(BASE_DIR, 'logs',
-                                 f'{gameworld}_{gameworld_id}'
-                                )
-                   )
+        os.mkdir(os.path.join(BASE_DIR, 'logs'))
+        # os.makedirs(os.path.join(BASE_DIR, 'logs',
+        #                          f'{gameworld}_{gameworld_id}'
+        #                         )
+        #            )
     except FileExistsError:
-        try:
-            os.mkdir(os.path.join(BASE_DIR, 'logs',
-                                  f'{gameworld}_{gameworld_id}'
-                                 )
-                    )
-        except FileExistsError:
-            pass
+        pass
+        # try:
+        #     os.mkdir(os.path.join(BASE_DIR, 'logs',
+        #                           f'{gameworld}_{gameworld_id}'
+        #                          )
+        #             )
+        # except FileExistsError:
+        #     pass
     finally:
         return os.path.join(BASE_DIR, 'logs',
-                            f'{gameworld}_{gameworld_id}',
-                            f'{file_name}.log'
+                            f'{gameworld}_{gameworld_id}.json'
                            )
 
 
