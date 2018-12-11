@@ -77,8 +77,8 @@ class Avatar(threading.Thread):
         self.headers_gameworld['accept'] = 'application/json, text/plain, */*'
         self.headers_gameworld['content-type'] = 'application/json;charset=utf-8'
         gameworld_details = data_get_all(self, state='gameworld')
-        self.details = {k: v for cache in gameworld_details['cache']  # implicit dictionary comprehension
-                        if 'Player:' in cache['name']                 # for fetching avatar detail
+        self.details = {k: v for cache in gameworld_details['cache']
+                        if 'Player:' in cache['name']
                         for k, v in cache['data'].items()
                     }
 
@@ -170,8 +170,8 @@ def login(email, password):
         headers['cookie'] += f' {k}={v};'
     account.headers_lobby = headers
     lobby_details = data_get_all(account, state='lobby')
-    account.details = {k: v for caches in lobby_details['cache'] # implicit dictionary comprehension
-                       if 'Player:' in caches['name']            # for fetching account details
+    account.details = {k: v for caches in lobby_details['cache']
+                       if 'Player:' in caches['name']
                        for k, v in caches['data'].items()
                     }
     save_account(account)

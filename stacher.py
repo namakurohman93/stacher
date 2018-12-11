@@ -29,8 +29,8 @@ class Stacher:
         while True:
             print(f'{self} [check avatar...]')
             lobby_details = data_get_all(self.account, state='lobby')
-            avatar_list = [avatar for caches in lobby_details['cache']  # implicit list comprehension
-                           if 'Collection:Avatar:' in caches['name']    # for fetching Collection Avatar
+            avatar_list = [avatar for caches in lobby_details['cache']
+                           if 'Collection:Avatar:' in caches['name']
                            for avatar in caches['data']['cache']
                         ]
             for avatar in avatar_list:
