@@ -29,27 +29,33 @@ def load_account():
 
 def create_path(gameworld, gameworld_id, save_path):
     if save_path:
-        return os.path.join(save_path,
-                            f'{gameworld}_{gameworld_id}.json'
-                           )
+        try:
+            os.mkdir(os.path.join(save_path,
+                                  f'{gameworld}_{gameworld_id}'
+                                 )
+                    )
+        finally:
+            return os.path.join(save_path,
+                                f'{gameworld}_{gameworld_id}',
+                                'data.json'
+                                )
     try:
-        os.mkdir(os.path.join(BASE_DIR, 'logs'))
-        # os.makedirs(os.path.join(BASE_DIR, 'logs',
-        #                          f'{gameworld}_{gameworld_id}'
-        #                         )
-        #            )
+        os.makedirs(os.path.join(BASE_DIR, 'logs',
+                                 f'{gameworld}_{gameworld_id}'
+                                )
+                   )
     except FileExistsError:
-        pass
-        # try:
-        #     os.mkdir(os.path.join(BASE_DIR, 'logs',
-        #                           f'{gameworld}_{gameworld_id}'
-        #                          )
-        #             )
-        # except FileExistsError:
-        #     pass
+        try:
+            os.mkdir(os.path.join(BASE_DIR, 'logs',
+                                  f'{gameworld}_{gameworld_id}'
+                                 )
+                    )
+        except FileExistsError:
+            pass
     finally:
         return os.path.join(BASE_DIR, 'logs',
-                            f'{gameworld}_{gameworld_id}.json'
+                            f'{gameworld}_{gameworld_id}',
+                            'data.json'
                            )
 
 

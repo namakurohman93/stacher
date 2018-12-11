@@ -1,125 +1,73 @@
-import os
 import time
+import json
 from threading import Thread
 from tinydb import TinyDB, Query
 from queue import Queue
 
-from accounts import Account, Avatar, data_get_all
+from accounts import data_get_all, login
 from connections import get, post
-from hooks import get_msid, get_token, get_session
-from utils import save_account, load_account, create_path, BASE_DIR
+from utils import load_account, create_path, intervals
 
 
 class Stacher:
-    def __init__(self, save_path=None, email=None, password=None):
+    def __init__(self, email, password, save_path=None):
         self.email = email
         self.password = password
         self.path = save_path
 
-        self.account = self.check_account(self.email, self.password)
+        self.account = self.check_account()
 
-        self.command_line()
+        self.start()
 
 
-    def command_line(self):
+    def start(self):
+        # first adjust time
+        interval = intervals(10)
+        print(f'{self} [sleeping:{interval//60}:{interval%60}]')
+        time.sleep(interval)
+        avatar_pool = {}
         while True:
-            gameworld = input()
-            avatar = Avatar(self.get_ranking, self.account,
-                            self.path, gameworld
-                           ).start()
+            print(f'{self} [check avatar...]')
+            lobby_details = data_get_all(self.account, state='lobby')
+            avatar_list = [avatar for caches in lobby_details['cache']  # implicit list comprehension
+                           if 'Collection:Avatar:' in caches['name']    # for fetching Collection Avatar
+                           for avatar in caches['data']['cache']
+                        ]
+            for avatar in avatar_list:
+                if avatar['data']['consumersId'] not in avatar_pool:
+                    av = self.account.build_avatar(
+                                avatar['data']['worldName'],
+                                avatar['data']['consumersId'],
+                                self.get_ranking,
+                                self.path
+                            )
+                    avatar_pool[avatar['data']['consumersId']] = av
+            # starting avatar
+            for gi in avatar_pool:
+                avatar_pool[gi].start()
+            # sleeping
+            interval = intervals(10)
+            print(f'{self} [sleeping:{interval//60}:{interval%60}]')
+            time.sleep(interval)
 
 
-    def check_account(self, email, password):
-        if 'account.py' not in os.listdir(BASE_DIR):
-            account = self.login(email, password)
-            save_account(account)
-            print(f'Welcome!!! {account.details["avatarName"]}')
-        else:
+    def check_account(self):
+        try:
             account = load_account()
             if self.test_login(account):
-                account = self.login(email, password)
-                save_account(account)
+                account = login(self.email, self.password)
                 print(f'Welcome!!! {account.details["avatarName"]}')
             else:
                 print(f'Welcome back!! {account.details["avatarName"]}')
-
-        return account
-
-
-    @staticmethod
-    def login(email, password):
-        while not email:
-            email = input('Email: ')
-        while not password:
-            password = input('Password: ')
-
-        account = Account()
-
-        # looking msid
-        url = 'https://mellon-t5.traviangames.com/authentication/login/ajax/form-validate?'
-        headers = {
-            'user-agent': 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:63.0) Gecko/20100101 Firefox/63.0',
-            'accept-encoding' : 'gzip, deflate, br',
-            'accept-language': 'en-US,en;q=0.5'
-        }
-        r = get(url,
-                headers=headers,
-                hooks={'response': get_msid},
-                timeout=60
-               )
-
-        account.msid = r.msid
-
-        # looking session lobby
-        url = f'https://mellon-t5.traviangames.com/authentication/login/ajax/form-validate?msid={account.msid}&msname=msid'
-        r = post(url,
-                 headers=headers,
-                 data={
-                       'email': email,
-                       'password': password
-                      },
-                 hooks={'response': get_token},
-                 timeout=60
-                )
-
-        headers['cookie'] = f'msid={account.msid};'
-
-        r = get(r.url_token,
-                headers=headers,
-                timeout=60,
-                allow_redirects=False
-               )
-        r = get(r.headers['location'],
-                headers=headers,
-                hooks={'response': get_session},
-                timeout=60,
-                allow_redirects=False
-               )
-
-        account.session_lobby = r.session
-
-        # set cookies & headers lobby
-        account.cookies_lobby = r.cookies
-
-        temp_cookie = {k: v for k, v in r.cookies.items()}
-        for k, v in temp_cookie.items():
-            headers['cookie'] += f' {k}={v};'
-
-        account.headers_lobby = headers
-
-        lobby_details = data_get_all(account, state='lobby')
-        account.details = {k: v for caches in lobby_details['cache']    # implicit dictionary comprehension
-                           if 'Player:' in caches['name']               # for fetching account details
-                           for k, v in caches['data'].items()
-                          }
-        del lobby_details
-
-        return account
+        except FileNotFoundError:
+            account = login(self.email, self.password)
+            print(f'Welcome!!! {account.details["avatarName"]}')
+        finally:
+            return account
 
 
     @staticmethod
     def test_login(account):
-
         return 'error' in data_get_all(account, state='lobby')
 
 
@@ -137,18 +85,15 @@ class Stacher:
                                'end': end,
                                'rankingType': ranking_type,
                                'rankingSubtype': ranking_subtype
-                              },
+                            },
                     'session': avatar.session_gameworld
-                   }
+                }
             r = post(url+f'c=ranking&a=getRanking&t{(time.time()*1000):.0f}',
                      headers=avatar.headers_gameworld,
                      json=data,
                      cookies=avatar.cookies_gameworld,
                      timeout=60
-                    )
-            # result = [f'{time.strftime("%d/%b/%Y:%H:%M:%S")} {x["name"]} {x["points"]}'
-            #           for x in r.json()['response']['results']
-            #          ]
+                )
             results.extend(r.json()['response']['results'])
             task.task_done()
 
@@ -165,17 +110,16 @@ class Stacher:
                            'id': avatar.details['playerId'],
                            'rankingType': ranking_type,
                            'rankingSubtype': ranking_subtype
-                          },
+                        },
                 'session': avatar.session_gameworld
-               }
+            }
         r = post(url+f'c=ranking&a=getRankAndCount&t{(time.time()*1000):.0f}',
                  headers=avatar.headers_gameworld,
                  json=data,
                  cookies=avatar.cookies_gameworld,
                  timeout=60
-                )
+            )
         total_player = r.json()['response']['numberOfItems']
-
         # prepare thread
         start, end = 0, 9
         results = []
@@ -189,58 +133,63 @@ class Stacher:
                            )
             worker.setDaemon(True)
             worker.start()
-
         # dispatch thread
         for _ in range((total_player//10)+1):
             task.put((start, end, results))
             time.sleep(0.1)
             start, end = start+10, end+10
-
         # threading done
         task.join()
-
-        # ranking = '\n'.join(results)
-        path = create_path(avatar.gameworld,
+        # save results
+        path = create_path(avatar.gameworld.lower(),
                            avatar.gameworld_id,
                            avatar.path
                           )
-        # with open(path, 'a') as f:
-        #     f.write(ranking)
-        #     f.write('\n')
-        db = TinyDB(path)
-        table = db.table(table_name)
-        user = Query()
-
-        for result in results:
-            if table.search(user.name == result['name']):
-                table.update(
-                    append(
-                        'data',
-                        {
-                            'epoch': time.time(),
-                            'datetime': time.strftime("%d/%b/%Y:%H:%M:%S"),
-                            'points': result['points']
-                        }
-                    ),
-                    user.name == result['name']
-                )
-            else:
-                table.insert(
-                    {
-                        'name': result['name'],
-                        'data': [{
-                            'epoch': time.time(),
-                            'datetime': time.strftime("%d/%b/%Y:%H:%M:%S"),
-                            'points': result['points']
-                        }]
-                    }
-                )
+        # db = TinyDB(path)
+        # table = db.table(table_name)
+        # user = Query()
+        try:
+            cache = open(path, 'r')
+            cache = json.load(cache)
+        except FileNotFoundError:
+            cache = {}
+            cache[table_name] = []
+        # for result in results:
+        #     if table.search(user.name == result['name']):
+        #         table.update(
+        #             append(
+        #                 'data',
+        #                 {
+        #                     'epoch': time.time(),
+        #                     'datetime': time.strftime("%d/%b/%Y:%H:%M:%S"),
+        #                     'points': result['points']
+        #                 }
+        #             ),
+        #             user.name == result['name']
+        #         )
+        #     else:
+        #         table.insert(
+        #             {
+        #                 'name': result['name'],
+        #                 'data': [{
+        #                     'epoch': time.time(),
+        #                     'datetime': time.strftime("%d/%b/%Y:%H:%M:%S"),
+        #                     'points': result['points']
+        #                 }]
+        #             }
+        #         )
+        try:
+            cache[table_name].extend(results)
+        except KeyError:
+            cache[table_name] = results
+        with open(path, 'w') as f:
+            f.write(json.dumps(cache, indent=4))
         print(f'{table_name} on {avatar.gameworld} done.')
 
 
-def append(field, n):
-    def transform(doc):
-        # if not isinstance(doc[field], list):
-        #     doc[field] = [doc[field]]
-        doc[field].append(n)
-    return transform
+# def append(field, n):
+#     def transform(doc):
+#         if not isinstance(doc[field], list):
+#             doc[field] = [doc[field]]
+#         doc[field].append(n)
+#     return transform
