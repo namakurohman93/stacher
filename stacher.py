@@ -1,7 +1,6 @@
 import time
 import json
 from threading import Thread
-from tinydb import TinyDB, Query
 from queue import Queue
 
 from accounts import data_get_all, login
@@ -145,51 +144,34 @@ class Stacher:
                            avatar.gameworld_id,
                            avatar.path
                           )
-        # db = TinyDB(path)
-        # table = db.table(table_name)
-        # user = Query()
         try:
             cache = open(path, 'r')
             cache = json.load(cache)
+            try:
+                cache[table_name]
+            except KeyError:
+                cache[table_name] = {}
         except FileNotFoundError:
             cache = {}
-            cache[table_name] = []
-        # for result in results:
-        #     if table.search(user.name == result['name']):
-        #         table.update(
-        #             append(
-        #                 'data',
-        #                 {
-        #                     'epoch': time.time(),
-        #                     'datetime': time.strftime("%d/%b/%Y:%H:%M:%S"),
-        #                     'points': result['points']
-        #                 }
-        #             ),
-        #             user.name == result['name']
-        #         )
-        #     else:
-        #         table.insert(
-        #             {
-        #                 'name': result['name'],
-        #                 'data': [{
-        #                     'epoch': time.time(),
-        #                     'datetime': time.strftime("%d/%b/%Y:%H:%M:%S"),
-        #                     'points': result['points']
-        #                 }]
-        #             }
-        #         )
-        try:
-            cache[table_name].extend(results)
-        except KeyError:
-            cache[table_name] = results
+            cache[table_name] = {}
+        result = (line for line in results)
+        data = (
+            {
+                x['playerId']: {
+                    'name': x['name'],
+                    'data': [{
+                        'timestamp': time.time(),
+                        'points': x['points']
+                    }]
+                }
+            } for x in result
+        )
+        for x in data:
+            for pid in x:
+                if pid in cache[table_name]:
+                    cache[table_name][pid]['data'].append(x[pid]['data'][0])
+                else:
+                    cache[table_name][pid] = x[pid]
         with open(path, 'w') as f:
             f.write(json.dumps(cache, indent=4))
         print(f'{table_name} on {avatar.gameworld} done.')
-
-
-# def append(field, n):
-#     def transform(doc):
-#         if not isinstance(doc[field], list):
-#             doc[field] = [doc[field]]
-#         doc[field].append(n)
-#     return transform

@@ -2,7 +2,6 @@ import time
 import threading
 
 from connections import get, post
-from exceptions import GetError
 from hooks import get_token, get_session, get_msid
 from utils import subtypes, intervals, save_account
 
@@ -84,12 +83,14 @@ class Avatar(threading.Thread):
 
 
     def run(self):
-        print(f'{threading.current_thread()} [starting]')
-        for subtype, table_name in subtypes():
-            self.get_ranking(self, 'ranking_Player',
-                             subtype, table_name
-                        )
-        self._started.clear()
+        print(f'{threading.current_thread()} <id:{id(self)}> [starting]')
+        try:
+            for subtype, table_name in subtypes():
+                self.get_ranking(self, 'ranking_Player',
+                                 subtype, table_name
+                            )
+        finally:
+            self._started.clear()
 
 
 def data_get_all(obj, state=None):
