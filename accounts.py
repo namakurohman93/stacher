@@ -84,13 +84,13 @@ class Avatar(threading.Thread):
 
     def run(self):
         print(f'{threading.current_thread()} <id:{id(self)}> [starting]')
-        try:
-            for subtype, table_name in subtypes():
-                self.get_ranking(self, 'ranking_Player',
-                                 subtype, table_name
-                            )
-        finally:
-            self._started.clear()
+        # try:
+        for subtype, table_name in subtypes():
+            self.get_ranking(self, 'ranking_Player',
+                             subtype, table_name
+                        )
+        # finally:
+        #     self._started.clear()
 
 
 def data_get_all(obj, state=None):

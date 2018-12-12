@@ -44,6 +44,8 @@ class Stacher:
             # starting avatar
             for gi in avatar_pool:
                 avatar_pool[gi].start()
+            for gi in avatar_pool:
+                avatar_pool[gi].join()
             # sleeping
             interval = intervals(10)
             print(f'{self} [sleeping:{interval//60}:{interval%60}]')
