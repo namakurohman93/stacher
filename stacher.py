@@ -1,11 +1,17 @@
 import time
 import json
-from threading import Thread
+import logging
+import threading
 from queue import Queue
 
 from accounts import data_get_all, login
 from connections import get, post
 from utils import load_account, create_path, intervals
+
+logging.basicConfig(
+    format='[%(asctime)s][%(levelname)s]: %(message)s',
+    level=logging.DEBUG, datefmt='%d/%b/%Y:%H:%M:%S'
+)
 
 
 class Stacher:
@@ -21,18 +27,19 @@ class Stacher:
 
     def start(self):
         # first adjust time
-        interval = intervals(10)
-        print(f'{self} [sleeping:{interval//60}:{interval%60}]')
-        time.sleep(interval)
+        # interval = intervals(10)
+        # print(f'{self} [sleeping:{interval//60}:{interval%60}]')
+        # time.sleep(interval)
         avatar_pool = {}
         while True:
-            print(f'{self} [check avatar...]')
+            # print(f'{self} [check avatar...]')
+            logging.info('check avatar.')
             lobby_details = data_get_all(self.account, state='lobby')
-            avatar_list = [avatar for caches in lobby_details['cache']
-                           if 'Collection:Avatar:' in caches['name']
-                           for avatar in caches['data']['cache']
-                        ]
-            for avatar in avatar_list:
+            avatars = [avatar for caches in lobby_details['cache']
+                       if 'Collection:Avatar:' in caches['name']
+                       for avatar in caches['data']['cache']
+                    ]
+            for avatar in avatars:
                 if avatar['data']['consumersId'] not in avatar_pool:
                     av = self.account.build_avatar(
                                 avatar['data']['worldName'],
@@ -43,12 +50,15 @@ class Stacher:
                     avatar_pool[avatar['data']['consumersId']] = av
             # starting avatar
             for gi in avatar_pool:
+                if avatar_pool[gi].is_alive():
+                    continue
                 avatar_pool[gi].start()
-            for gi in avatar_pool:
-                avatar_pool[gi].join()
+            # for gi in avatar_pool:
+            #     avatar_pool[gi].join()
             # sleeping
-            interval = intervals(10)
-            print(f'{self} [sleeping:{interval//60}:{interval%60}]')
+            interval = intervals(5)
+            # print(f'{self} [sleeping:{interval//60}:{interval%60}]')
+            logging.info(f'Stacher sleeping:{interval//60}:{interval%60}')
             time.sleep(interval)
 
 
@@ -57,12 +67,12 @@ class Stacher:
             account = load_account()
             if self.test_login(account):
                 account = login(self.email, self.password)
-                print(f'Welcome!!! {account.details["avatarName"]}')
+                logging.info(f'Welcome!!! {account.details["avatarName"]}')
             else:
-                print(f'Welcome back!! {account.details["avatarName"]}')
+                logging.info(f'Welcome back!! {account.details["avatarName"]}')
         except FileNotFoundError:
             account = login(self.email, self.password)
-            print(f'Welcome!!! {account.details["avatarName"]}')
+            logging.info(f'Welcome!!! {account.details["avatarName"]}')
         finally:
             return account
 
@@ -78,6 +88,8 @@ class Stacher:
         while True:
             start, end, results = task.get()
             # print(f'{(time.time()*1000):.0f}')
+            if start is None:
+                break
             data = {
                     'controller': 'ranking',
                     'action': 'getRanking',
@@ -124,16 +136,18 @@ class Stacher:
         # prepare thread
         start, end = 0, 9
         results = []
-        task = Queue(maxsize=(total_player//10)+2)
+        threads = []
+        task = Queue()
 
-        for _ in range(8):  # if need more fast, increase range number
-            worker = Thread(target=Stacher.stacher_thread,
-                            args=(task, ranking_type,
-                                  ranking_subtype, avatar, url
-                                 )
-                           )
-            worker.setDaemon(True)
+        for _ in range(2):  # if need more fast, increase range number
+            worker = threading.Thread(target=Stacher.stacher_thread,
+                                      args=(task, ranking_type,
+                                      ranking_subtype, avatar, url
+                                    )
+                                )
+            # worker.setDaemon(True)
             worker.start()
+            threads.append(worker)
         # dispatch thread
         for _ in range((total_player//10)+1):
             task.put((start, end, results))
@@ -141,6 +155,10 @@ class Stacher:
             start, end = start+10, end+10
         # threading done
         task.join()
+        for _ in range(2):
+            task.put((None, None, None))
+        for t in threads:
+            t.join()
         # save results
         path = create_path(avatar.gameworld.lower(),
                            avatar.gameworld_id,
@@ -171,9 +189,10 @@ class Stacher:
         for x in data:
             for pid in x:
                 if pid in cache[table_name]:
-                    cache[table_name][pid]['data'].append(x[pid]['data'][0])
+                    cache[table_name][pid]['data'].extend(x[pid]['data'])
                 else:
                     cache[table_name][pid] = x[pid]
         with open(path, 'w') as f:
             f.write(json.dumps(cache, indent=4))
-        print(f'{table_name} on {avatar.gameworld} done.')
+        # print(f'{table_name} on {avatar.gameworld} done.')
+        logging.info(f'{table_name} on {avatar.gameworld} done.')

@@ -1,9 +1,15 @@
 import time
+import logging
 import threading
 
 from connections import get, post
 from hooks import get_token, get_session, get_msid
 from utils import subtypes, intervals, save_account
+
+logging.basicConfig(
+    format='[%(asctime)s][%(levelname)s]: %(message)s',
+    level=logging.DEBUG, datefmt='%d/%b/%Y:%H:%M:%S'
+)
 
 
 class Account:
@@ -83,14 +89,26 @@ class Avatar(threading.Thread):
 
 
     def run(self):
-        print(f'{threading.current_thread()} <id:{id(self)}> [starting]')
-        # try:
-        for subtype, table_name in subtypes():
-            self.get_ranking(self, 'ranking_Player',
-                             subtype, table_name
+        # first adjust time
+        interval = intervals(5)
+        logging.info(f'{threading.current_thread()} <id:{id(self)}>' + \
+                     f' [sleeping:{interval//60}:{interval%60}]'
+                    )
+        time.sleep(interval)
+        while True:
+            logging.info(f'{threading.current_thread()} <id:{id(self)}>' + \
+                         f' [starting]'
                         )
-        # finally:
-        #     self._started.clear()
+            for subtype, table_name in subtypes():
+                self.get_ranking(self, 'ranking_Player',
+                                 subtype, table_name
+                            )
+            interval = intervals(5)
+            logging.info(f'{threading.current_thread()} <id:{id(self)}>' + \
+                         f' [sleeping:{interval//60}:{interval%60}]'
+                        )
+            time.sleep(interval)
+        #self._started.clear()
 
 
 def data_get_all(obj, state=None):
