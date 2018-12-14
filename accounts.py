@@ -53,7 +53,6 @@ class Avatar(threading.Thread):
         self.session_gameworld = None
         self.cookies_gameworld = None
         self.headers_gameworld = None
-        self.details = None
 
         self.login()
 
@@ -84,11 +83,6 @@ class Avatar(threading.Thread):
             self.headers_gameworld['cookie'] += f' {k}={v};'
         self.headers_gameworld['accept'] = 'application/json, text/plain, */*'
         self.headers_gameworld['content-type'] = 'application/json;charset=utf-8'
-        gameworld_details = data_get_all(self, state='gameworld')
-        self.details = {k: v for cache in gameworld_details['cache']
-                        if 'Player:' in cache['name']
-                        for k, v in cache['data'].items()
-                    }
 
 
     def run(self):
@@ -113,19 +107,11 @@ class Avatar(threading.Thread):
             time.sleep(interval)
 
 
-def data_get_all(obj, state=None):
-    url = obj.lobby_api if state == 'lobby' else \
-        obj.gameworld_api if state == 'gameworld' else \
-        None
-    session = obj.session_lobby if state == 'lobby' else \
-        obj.session_gameworld if state == 'gameworld' else \
-        None
-    headers = obj.headers_lobby if state == 'lobby' else \
-        obj.headers_gameworld if state == 'gameworld' else \
-        None
-    cookies = obj.cookies_lobby if state == 'lobby' else \
-        obj.cookies_gameworld if state == 'gameworld' else \
-        None
+def data_get_all(obj):
+    url = obj.lobby_api
+    session = obj.session_lobby
+    headers = obj.headers_lobby
+    cookies = obj.cookies_lobby
     data = {
             'action': 'getAll',
             'controller': 'player',
@@ -139,6 +125,38 @@ def data_get_all(obj, state=None):
              timeout=60
         )
     return r.json()
+
+
+def check_session(obj, state=None):
+    if state == 'lobby':
+        url = obj.lobby_api
+        session = obj.session_lobby
+        headers = obj.headers_lobby
+        cookies = obj.cookies_lobby
+    elif state == 'gameworld':
+        url = obj.lobby_api+f'a=get&c=cache&t{(time.time()*1000):.0f}'
+        session = obj.session_gameworld
+        headers = obj.headers_gameworld
+        cookies = obj.cookies_gameworld
+    else:
+        url, session, headers, cookies = None, None, None, None
+    data = {
+        'action': 'get',
+        'controller': 'cache',
+        'params': {
+            'names': [
+                f'Session:{session}'
+            ]
+        },
+        'session': session
+    }
+    r = post(url,
+             headers=headers,
+             json=data,
+             cookies=cookies,
+             timeout=60
+            )
+    return r.text
 
 
 def login(email, password):
@@ -190,7 +208,7 @@ def login(email, password):
     for k, v in temp_cookie.items():
         headers['cookie'] += f' {k}={v};'
     account.headers_lobby = headers
-    lobby_details = data_get_all(account, state='lobby')
+    lobby_details = data_get_all(account)
     account.details = {k: v for caches in lobby_details['cache']
                        if 'Player:' in caches['name']
                        for k, v in caches['data'].items()

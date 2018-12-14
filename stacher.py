@@ -4,7 +4,7 @@ import logging
 import threading
 from queue import Queue
 
-from accounts import data_get_all, login
+from accounts import data_get_all, check_session, login
 from connections import get, post
 from utils import load_account, create_path, intervals
 
@@ -25,14 +25,14 @@ class Stacher:
 
         self.account = self.check_account()
 
-        self.start()
+        # self.start()
 
 
     def start(self):
         avatar_pool = {}
         while True:
             logging.info('check avatar.')
-            lobby_details = data_get_all(self.account, state='lobby')
+            lobby_details = data_get_all(self.account)
             avatars = [avatar for caches in lobby_details['cache']
                        if 'Collection:Avatar:' in caches['name']
                        for avatar in caches['data']['cache']
@@ -74,7 +74,7 @@ class Stacher:
 
     @staticmethod
     def test_login(account):
-        return 'error' in data_get_all(account, state='lobby')
+        return 'error' in check_session(account, state='lobby')
 
 
     @staticmethod
@@ -109,25 +109,24 @@ class Stacher:
     def get_ranking(avatar, ranking_type,
                     ranking_subtype, table_name):
         # get total player
-        url = avatar.gameworld_api
+        url = avatar.lobby_api
         data = {
-                'controller': 'ranking',
-                'action': 'getRankAndCount',
+                'controller': 'cache',
+                'action': 'get',
                 'params': {
-                           'id': avatar.details['playerId'],
-                           'rankingType': ranking_type,
-                           'rankingSubtype': ranking_subtype
+                           'names': [f'GameWorld:{avatar.gameworld_id}']
                         },
-                'session': avatar.session_gameworld
+                'session': avatar.session_lobby
             }
-        r = post(url+f'c=ranking&a=getRankAndCount&t{(time.time()*1000):.0f}',
-                 headers=avatar.headers_gameworld,
+        r = post(url,
+                 headers=avatar.headers_lobby,
                  json=data,
-                 cookies=avatar.cookies_gameworld,
+                 cookies=avatar.cookies_lobby,
                  timeout=60
             )
-        total_player = r.json()['response']['numberOfItems']
+        total_player = r.json()['cache'][0]['data']['playersRegistered']
         # prepare thread
+        url = avatar.gameworld_api
         start, end = 0, 9
         results = []
         threads = []
