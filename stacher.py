@@ -29,13 +29,8 @@ class Stacher:
 
 
     def start(self):
-        # first adjust time
-        # interval = intervals(10)
-        # print(f'{self} [sleeping:{interval//60}:{interval%60}]')
-        # time.sleep(interval)
         avatar_pool = {}
         while True:
-            # print(f'{self} [check avatar...]')
             logging.info('check avatar.')
             lobby_details = data_get_all(self.account, state='lobby')
             avatars = [avatar for caches in lobby_details['cache']
@@ -56,11 +51,8 @@ class Stacher:
                 if avatar_pool[gi].is_alive():
                     continue
                 avatar_pool[gi].start()
-            # for gi in avatar_pool:
-            #     avatar_pool[gi].join()
             # sleeping
-            interval = intervals(5)
-            # print(f'{self} [sleeping:{interval//60}:{interval%60}]')
+            interval = intervals(10)
             logging.info(f'Stacher sleeping:{interval//60}:{interval%60}')
             time.sleep(interval)
 
@@ -90,7 +82,6 @@ class Stacher:
                        ranking_subtype, avatar, url):
         while True:
             start, end, results = task.get()
-            # print(f'{(time.time()*1000):.0f}')
             if start is None:
                 break
             data = {
@@ -142,13 +133,12 @@ class Stacher:
         threads = []
         task = Queue()
 
-        for _ in range(2):  # if need more fast, increase range number
+        for _ in range(2):
             worker = threading.Thread(target=Stacher.stacher_thread,
                                       args=(task, ranking_type,
                                       ranking_subtype, avatar, url
                                     )
                                 )
-            # worker.setDaemon(True)
             worker.start()
             threads.append(worker)
         # dispatch thread
@@ -197,5 +187,4 @@ class Stacher:
                     cache[table_name][pid] = x[pid]
         with open(path, 'w') as f:
             f.write(json.dumps(cache, indent=4))
-        # print(f'{table_name} on {avatar.gameworld} done.')
         logging.info(f'{table_name} on {avatar.gameworld} done.')

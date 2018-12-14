@@ -93,7 +93,7 @@ class Avatar(threading.Thread):
 
     def run(self):
         # first adjust time
-        interval = intervals(5)
+        interval = intervals(10)
         logging.info(f'{threading.current_thread()} <id:{id(self)}>' + \
                      f' [sleeping:{interval//60}:{interval%60}]'
                     )
@@ -106,12 +106,11 @@ class Avatar(threading.Thread):
                 self.get_ranking(self, 'ranking_Player',
                                  subtype, table_name
                             )
-            interval = intervals(5)
+            interval = intervals(10)
             logging.info(f'{threading.current_thread()} <id:{id(self)}>' + \
                          f' [sleeping:{interval//60}:{interval%60}]'
                         )
             time.sleep(interval)
-        #self._started.clear()
 
 
 def data_get_all(obj, state=None):
