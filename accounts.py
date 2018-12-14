@@ -10,10 +10,10 @@ logging.basicConfig(
     format='[%(asctime)s][%(levelname)s]: %(message)s',
     level=logging.DEBUG, datefmt='%d/%b/%Y:%H:%M:%S'
 )
-
 # Logging logging.INFO only so it doesnt floaded with logging.DEBUG
 for logs in logging.Logger.manager.loggerDict:
     logging.getLogger(logs).setLevel(logging.INFO)
+
 
 class Account:
     def __init__(self):
