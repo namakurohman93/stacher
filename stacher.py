@@ -13,6 +13,9 @@ logging.basicConfig(
     level=logging.DEBUG, datefmt='%d/%b/%Y:%H:%M:%S'
 )
 
+# Logging logging.INFO only so it doesnt floaded with logging.DEBUG
+for logs in logging.Logger.manager.loggerDict:
+    logging.getLogger(logs).setLevel(logging.INFO)
 
 class Stacher:
     def __init__(self, email, password, save_path=None):

@@ -11,6 +11,9 @@ logging.basicConfig(
     level=logging.DEBUG, datefmt='%d/%b/%Y:%H:%M:%S'
 )
 
+# Logging logging.INFO only so it doesnt floaded with logging.DEBUG
+for logs in logging.Logger.manager.loggerDict:
+    logging.getLogger(logs).setLevel(logging.INFO)
 
 class Account:
     def __init__(self):
@@ -145,7 +148,7 @@ def login(email, password):
     url = 'https://mellon-t5.traviangames.com/authentication/login/' + \
           'ajax/form-validate?'
     ua = 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:63.0) Gecko/20100101' + \
-         'Firefox/63.0'
+         ' Firefox/63.0'
     headers = {
         'user-agent': ua,
         'accept-encoding' : 'gzip, deflate, br',
