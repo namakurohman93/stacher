@@ -25,7 +25,7 @@ class Stacher:
 
         self.account = self.check_account()
 
-        # self.start()
+        self.start()
 
 
     def start(self):
