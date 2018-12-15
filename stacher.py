@@ -124,7 +124,7 @@ class Stacher:
                  cookies=avatar.cookies_lobby,
                  timeout=60
             )
-        total_player = r.json()['cache'][0]['data']['playersRegistered']
+        total_player = int(r.json()['cache'][0]['data']['playersRegistered'])
         # prepare thread
         url = avatar.gameworld_api
         start, end = 0, 9
