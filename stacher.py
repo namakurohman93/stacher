@@ -86,25 +86,29 @@ class Stacher:
             start, end, results = task.get()
             if start is None:
                 break
-            data = {
-                    'controller': 'ranking',
-                    'action': 'getRanking',
-                    'params': {
-                               'start': start,
-                               'end': end,
-                               'rankingType': ranking_type,
-                               'rankingSubtype': ranking_subtype
-                            },
-                    'session': avatar.session_gameworld
-                }
-            r = post(url+f'c=ranking&a=getRanking&t{(time.time()*1000):.0f}',
-                     headers=avatar.headers_gameworld,
-                     json=data,
-                     cookies=avatar.cookies_gameworld,
-                     timeout=60
-                )
-            results.extend(r.json()['response']['results'])
-            task.task_done()
+            try:
+                data = {
+                        'controller': 'ranking',
+                        'action': 'getRanking',
+                        'params': {
+                                   'start': start,
+                                   'end': end,
+                                   'rankingType': ranking_type,
+                                   'rankingSubtype': ranking_subtype
+                                },
+                        'session': avatar.session_gameworld
+                    }
+                r = post(url+f'c=ranking&a=getRanking&t{(time.time()*1000):.0f}',
+                         headers=avatar.headers_gameworld,
+                         json=data,
+                         cookies=avatar.cookies_gameworld,
+                         timeout=60
+                    )
+                results.extend(r.json()['response']['results'])
+            except Exception as e:
+                logging.debug(f'{e}')
+            finally:
+                task.task_done()
 
 
     @staticmethod
