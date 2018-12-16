@@ -48,9 +48,11 @@ class Stacher:
                     avatar_pool[avatar['data']['consumersId']] = av
             # starting avatar
             for gi in avatar_pool:
-                if avatar_pool[gi].is_alive():
+                try:
+                    avatar_pool[gi].start()
+                except Exception as e:
+                    logging.debug(f'{e}')
                     continue
-                avatar_pool[gi].start()
             # sleeping
             interval = intervals(10)
             logging.info(f'Stacher sleeping:{interval//60}:{interval%60}')

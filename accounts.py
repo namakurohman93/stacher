@@ -93,18 +93,22 @@ class Avatar(threading.Thread):
                     )
         time.sleep(interval)
         while True:
-            logging.info(f'{threading.current_thread()} <id:{id(self)}>' + \
-                         f' [starting]'
-                        )
-            for subtype, table_name in subtypes():
-                self.get_ranking(self, 'ranking_Player',
-                                 subtype, table_name
+            try:
+                logging.info(f'{threading.current_thread()} <id:{id(self)}>' + \
+                             f' [starting]'
                             )
-            interval = intervals(10)
-            logging.info(f'{threading.current_thread()} <id:{id(self)}>' + \
-                         f' [sleeping:{interval//60}:{interval%60}]'
-                        )
-            time.sleep(interval)
+                for subtype, table_name in subtypes():
+                    self.get_ranking(self, 'ranking_Player',
+                                     subtype, table_name
+                                )
+            except Exception as e:
+                logging.debug(f'{e}')
+            finally:
+                interval = intervals(10)
+                logging.info(f'{threading.current_thread()} <id:{id(self)}>' + \
+                             f' [sleeping:{interval//60}:{interval%60}]'
+                            )
+                time.sleep(interval)
 
 
 def data_get_all(obj):
