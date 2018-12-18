@@ -18,10 +18,13 @@ for logs in logging.Logger.manager.loggerDict:
 
 
 class Stacher:
-    def __init__(self, email, password, save_path=None):
+    def __init__(self, email, password, save_path=None, exclude=[]):
         self.email = email
         self.password = password
         self.path = save_path
+        self.exclude = []
+        for gameworld in exclude:
+            self.exclude.append(gameworld.lower())
 
         self.account = self.check_account()
 
@@ -39,13 +42,14 @@ class Stacher:
                     ]
             for avatar in avatars:
                 if avatar['data']['consumersId'] not in avatar_pool:
-                    av = self.account.build_avatar(
-                                avatar['data']['worldName'],
-                                avatar['data']['consumersId'],
-                                self.get_ranking,
-                                self.path
-                            )
-                    avatar_pool[avatar['data']['consumersId']] = av
+                    if avatar['data']['worldName'].lower() not in self.exclude:
+                        av = self.account.build_avatar(
+                                    avatar['data']['worldName'],
+                                    avatar['data']['consumersId'],
+                                    self.get_ranking,
+                                    self.path
+                                )
+                        avatar_pool[avatar['data']['consumersId']] = av
             # starting avatar
             for gi in avatar_pool:
                 try:
