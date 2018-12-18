@@ -193,7 +193,7 @@ def login(email, password):
              hooks={'response': get_token},
              timeout=60
         )
-    headers['cookie'] = f'msid={account.msid}'
+    headers['cookie'] = f'msid={account.msid};'
     r = get(r.url_token,
             headers=headers,
             timeout=60,
