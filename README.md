@@ -32,7 +32,7 @@ Stacher(email, password, exclude=['com1', 'com2'])
 - there is unidentification bug out there, if you don't mind please make an issue
 
 #### thank you for
-- [@scriptworld](https://github.com/scriptworld) for inspiring me and everything you have taught
+- [@scriptworld](https://github.com/scriptworld-git) for inspiring me and everything you have taught
 - [@lijok](https://github.com/lijok) for sharing the script
 
 ---
