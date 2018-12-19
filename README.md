@@ -18,8 +18,8 @@ the script will try to collecting statistic ranking on every avatar you have. to
 ```python
 from stacher import Stacher
 
-email = dummy@email.com
-password = dummypassword
+email = 'dummy@email.com'
+password = 'dummypassword'
 
 Stacher(email, password, exclude=['com1', 'com2'])
 ```
